@@ -1,0 +1,44 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+        <div class="container">
+            <div>
+                <a href="/PrettyNum/add/" class="btn btn-primary">新建靓号</a>
+            </div>
+            <div class="panel panel-default">
+                <!-- Default panel contents -->
+                <div class="panel-heading">
+                    <span class="glyphicon glyphicon-th-list" aria-hidden="true"></span>
+                    靓号列表
+                </div>
+                <!-- Table -->
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>号码</th>
+                            <th>价格</th>
+                            <th>级别</th>
+                            <th>状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for obj in users %}
+                        <tr>
+                            <th>{{ obj.id }}</th>
+                            <td>{{ obj.mobile }}</td>
+                            <td>{{ obj.price }}</td>
+                            <td>{{ obj.get_level_display }}</td>
+                            <td>{{ obj.get_status_display }}</td>
+                            <td>
+                                <a href="" class="btn btn-primary btn-xs">编辑</a>
+                                <a href="" class="btn btn-danger btn-xs">删除</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+{% endblock %}

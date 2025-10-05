@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.shortcuts import render, redirect
 from app01 import models
 from django import forms
@@ -68,3 +69,31 @@ def user_edit(request, nid):
 def user_delete(request, nid):
     models.UserInfo.objects.filter(id=nid).delete()
     return redirect("/user/list/")
+
+
+def prettynum_list(request):
+    queryset = models.PrettyNum.objects.all().order_by('-level')
+    return render(request, 'PrettyNum_list.html', {'users': queryset})
+
+
+class PrettyNumForm(forms.ModelForm):
+    class Meta:
+        model = models.PrettyNum
+        fields = ['mobile', 'price', 'level', 'status']
+
+    def clean_mobile(self):
+        mobile = self.cleaned_data['mobile']
+        if len(mobile) != 11:
+            raise ValidationError('nm')
+        return mobile
+
+
+def prettynum_add(request):
+    if request.method == "GET":
+        form = PrettyNumForm()
+        return render(request, 'prettynum_add.html', {'form': form})
+    form = PrettyNumForm(data=request.POST)
+    if form.is_valid():
+        form.save()
+        return redirect("/PrettyNum/list/")
+    return render(request, 'prettynum_add.html', {'form': form})
