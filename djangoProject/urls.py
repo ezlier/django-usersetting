@@ -17,4 +17,6 @@ urlpatterns = [
 
     path('PrettyNum/list/', views.prettynum_list),
     path('PrettyNum/add/', views.prettynum_add),
+    path('PrettyNum/<int:nid>/edit/', views.prettynum_edit),
+    path('PrettyNum/<int:nid>/delete/', views.prettynum_delete),
 ]

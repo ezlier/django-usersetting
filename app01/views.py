@@ -1,3 +1,4 @@
+from django.core.paginator import Paginator
 from django.core.exceptions import ValidationError
 from django.shortcuts import render, redirect
 from app01 import models
@@ -72,8 +73,35 @@ def user_delete(request, nid):
 
 
 def prettynum_list(request):
-    queryset = models.PrettyNum.objects.all().order_by('-level')
-    return render(request, 'PrettyNum_list.html', {'users': queryset})
+    # 建300条数据
+    # for i in range(300):
+    #     models.PrettyNum.objects.create(mobile=12345678765,price=i+20,level=2,status=1)
+
+    data_dict = {}
+    value = request.GET.get('data')
+    if value:
+        data_dict["mobile__contains"] = value
+    else:
+        value = ""
+
+    queryset = models.PrettyNum.objects.filter(**data_dict).order_by('-level')
+
+    # 2. 分页核心逻辑
+    page = request.GET.get('page', 1)  # 获取当前页码（默认为1）
+    paginator = Paginator(queryset, 10)  # 每页显示10条数据
+
+    try:
+        page_obj = paginator.page(page)
+    except Exception:
+        page_obj = paginator.page(1)
+
+    context = {
+        'users': page_obj,       # 当前页数据
+        'page_obj': page_obj,    # 页对象
+        'paginator': paginator,  # 分页器本身（可获取页数等）
+        'value': value,          # 搜索关键字，返回前端以便保留输入
+    }
+    return render(request, 'PrettyNum_list.html', context)
 
 
 class PrettyNumForm(forms.ModelForm):
@@ -81,11 +109,12 @@ class PrettyNumForm(forms.ModelForm):
         model = models.PrettyNum
         fields = ['mobile', 'price', 'level', 'status']
 
-    def clean_mobile(self):
-        mobile = self.cleaned_data['mobile']
-        if len(mobile) != 11:
-            raise ValidationError('nm')
-        return mobile
+    # 校验
+    # def clean_mobile(self):
+    #     mobile = self.cleaned_data['mobile']
+    #     if len(mobile) != 11:
+    #         raise ValidationError('nm')
+    #     return mobile
 
 
 def prettynum_add(request):
@@ -97,3 +126,20 @@ def prettynum_add(request):
         form.save()
         return redirect("/PrettyNum/list/")
     return render(request, 'prettynum_add.html', {'form': form})
+
+
+def prettynum_edit(request, nid):
+    row = models.PrettyNum.objects.filter(id=nid).first()
+    if request.method == "GET":
+        form = PrettyNumForm(instance=row)
+        return render(request, 'prettynum_edit.html', {'form': form})
+    form = PrettyNumForm(data=request.POST, instance=row)
+    if form.is_valid():
+        form.save()
+        return redirect("/PrettyNum/list/")
+    return render(request, 'prettynum_edit.html', {'form': form})
+
+
+def prettynum_delete(request, nid):
+    models.PrettyNum.objects.filter(id=nid).delete()
+    return redirect("/PrettyNum/list/")
