@@ -1,6 +1,7 @@
 from django.core.paginator import Paginator
 from django.core.exceptions import ValidationError
 from django.shortcuts import render, redirect
+from app01.utils.encrypt import md5
 from app01 import models
 from django import forms
 
@@ -96,10 +97,10 @@ def prettynum_list(request):
         page_obj = paginator.page(1)
 
     context = {
-        'users': page_obj,       # 当前页数据
-        'page_obj': page_obj,    # 页对象
+        'users': page_obj,  # 当前页数据
+        'page_obj': page_obj,  # 页对象
         'paginator': paginator,  # 分页器本身（可获取页数等）
-        'value': value,          # 搜索关键字，返回前端以便保留输入
+        'value': value,  # 搜索关键字，返回前端以便保留输入
     }
     return render(request, 'PrettyNum_list.html', context)
 
@@ -143,3 +144,67 @@ def prettynum_edit(request, nid):
 def prettynum_delete(request, nid):
     models.PrettyNum.objects.filter(id=nid).delete()
     return redirect("/PrettyNum/list/")
+
+
+def admin_list(request):
+    queryset = models.Admin.objects.all()
+    context = {'admins': queryset}
+    return render(request, 'admin_list.html', context)
+
+
+class AdminForm(forms.ModelForm):
+    confirm_password = forms.CharField(
+        label='确认密码',
+        widget=forms.PasswordInput(attrs={'class': 'form-control'}, render_value=True),
+    )
+
+    class Meta:
+        model = models.Admin
+        fields = ['username', 'password', 'confirm_password']
+        widgets = {
+            'username': forms.TextInput(attrs={'class': 'form-control'}),
+            'password': forms.PasswordInput(attrs={'class': 'form-control'}),
+        }
+
+    def clean_password(self):
+        pwd = self.cleaned_data.get('password')
+        return md5(pwd)
+
+    def clean_confirm_password(self):
+        pwd = self.cleaned_data.get('password')
+        confirm = md5(self.cleaned_data.get('confirm_password'))
+        if pwd != confirm:
+            raise ValidationError("密码不一致")
+        return confirm
+
+
+def admin_add(request):
+    title = "添加管理员"
+    if request.method == "GET":
+        form = AdminForm()
+        return render(request, 'change.html', {"form": form, "title": title})
+    form = AdminForm(data=request.POST)
+    if form.is_valid():
+        form.save()
+        return redirect("/admin/list/")
+    return render(request, 'change.html', {'form': form})
+
+
+def admin_edit(request, nid):
+    row = models.Admin.objects.filter(id=nid).first()
+    if request.method == "GET":
+        if not row:
+            return redirect("/admin/list/")
+        title = '编辑管理员'
+        form = AdminForm(instance=row)
+        return render(request, 'change.html', {'form': form, 'title': title})
+    form = AdminForm(data=request.POST, instance=row)
+    if form.is_valid():
+        form.save()
+        return redirect("/admin/list/")
+    return render(request, 'change.html', {'form': form})
+
+
+def admin_delete(request, nid):
+    models.Admin.objects.filter(id=nid).delete()
+    return redirect("/admin/list/")
