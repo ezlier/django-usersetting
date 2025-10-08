@@ -24,4 +24,7 @@ urlpatterns = [
     path('admin/add/', views.admin_add),
     path('admin/<int:nid>/edit/', views.admin_edit),
     path('admin/<int:nid>/delete/', views.admin_delete),
+
+    path('login/', views.login),
+    path('logout/', views.logout),
 ]

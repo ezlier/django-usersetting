@@ -147,6 +147,9 @@ def prettynum_delete(request, nid):
 
 
 def admin_list(request):
+    info = request.session.get('info')
+    if not info:
+        return redirect("/login/")
     queryset = models.Admin.objects.all()
     context = {'admins': queryset}
     return render(request, 'admin_list.html', context)
@@ -208,3 +211,39 @@ def admin_edit(request, nid):
 def admin_delete(request, nid):
     models.Admin.objects.filter(id=nid).delete()
     return redirect("/admin/list/")
+
+
+class LoginForm(forms.Form):
+    username = forms.CharField(
+        label="用户名",
+        widget=forms.TextInput(attrs={'class': 'form-control'}),
+    )
+    password = forms.CharField(
+        label="密码",
+        widget=forms.PasswordInput(attrs={'class': 'form-control'}),
+    )
+
+    def clean_password(self):
+        pwd = self.cleaned_data.get('password')
+        return md5(pwd)
+
+
+def login(request):
+    if request.method == "GET":
+        form = LoginForm()
+        return render(request, 'login.html', {'form': form})
+    form = LoginForm(data=request.POST)
+    if form.is_valid():
+        admin_object = models.Admin.objects.filter(**form.cleaned_data).first()
+        if not admin_object:
+            form.add_error('password', 'error')
+            return render(request, 'login.html', {'form': form})
+        request.session['info'] = {'id': admin_object.id, 'name': admin_object.username}
+        return redirect("/admin/list/")
+
+    return render(request, 'login.html', {'form': form})
+
+
+def logout(request):
+    request.session.clear()
+    return redirect("/login/")
