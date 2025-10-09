@@ -1,9 +1,12 @@
+from io import BytesIO
 from django.core.paginator import Paginator
 from django.core.exceptions import ValidationError
+from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from app01.utils.encrypt import md5
 from app01 import models
 from django import forms
+from app01.utils.code import check_code
 
 
 # Create your views here.
@@ -222,6 +225,10 @@ class LoginForm(forms.Form):
         label="密码",
         widget=forms.PasswordInput(attrs={'class': 'form-control'}),
     )
+    code = forms.CharField(
+        label="验证码",
+        widget=forms.TextInput(attrs={'class': 'form-control'}),
+    )
 
     def clean_password(self):
         pwd = self.cleaned_data.get('password')
@@ -234,11 +241,17 @@ def login(request):
         return render(request, 'login.html', {'form': form})
     form = LoginForm(data=request.POST)
     if form.is_valid():
+        user_input_code = form.cleaned_data.pop('code')
+        code = request.session.get('image_code')
+        if code.upper() != user_input_code.upper():
+            form.add_error('code', '验证码错误')
+            return render(request, 'login.html', {'form': form})
         admin_object = models.Admin.objects.filter(**form.cleaned_data).first()
         if not admin_object:
             form.add_error('password', 'error')
             return render(request, 'login.html', {'form': form})
         request.session['info'] = {'id': admin_object.id, 'name': admin_object.username}
+        request.session.set_expiry(60*60*24*7)
         return redirect("/admin/list/")
 
     return render(request, 'login.html', {'form': form})
@@ -247,3 +260,13 @@ def login(request):
 def logout(request):
     request.session.clear()
     return redirect("/login/")
+
+
+def image_code(request):
+    img, code_string = check_code()
+    request.session['image_code'] = code_string
+    request.session.set_expiry(60)
+    stream = BytesIO()
+    img.save(stream, 'png')
+
+    return HttpResponse(stream.getvalue())
